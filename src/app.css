@@ -1,0 +1,40 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+#root {
+  display: flex;
+  justify-content: center;
+
+  height: 100dvh;
+  background-color: #fae9de;
+  overflow: hidden;
+  position: relative;
+}
+
+#app {
+  background-color: #fae9de;
+  margin: 0 auto;
+  display: flex;
+  flex-flow: column nowrap;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+.MuiContainer-root {
+  padding: 0 !important;
+}
+
+#content {
+  background-color: #fae9de;
+  width: 100%;
+  height: 67%;
+  overflow: hidden !important;
+}
+
+#footer {
+  border-radius: 35px;
+  width: 100%;
+  height: 10%;
+}
