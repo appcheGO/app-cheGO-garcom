@@ -3,16 +3,18 @@ import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
 import './app.css';
-import Container from '@mui/material/Container';
-import { Outlet } from 'react-router-dom';
-import { CarrinhoProvider } from './context/useCarrinho';
+// import Container from '@mui/material/Container';
+// import { Outlet } from 'react-router-dom';
+// import { CarrinhoProvider } from './context/useCarrinho';
+import { AppRoutes } from './routes/AppRoutes';
 
 export default function App() {
   return (
-    <Container id="app" maxWidth="sm">
-      <CarrinhoProvider>
-        <Outlet />
-      </CarrinhoProvider>
-    </Container>
+    // <Container id="app" maxWidth="sm">
+    //   <CarrinhoProvider>
+    //     <Outlet />
+    //   </CarrinhoProvider>
+    // </Container>
+    <AppRoutes />
   );
 }
