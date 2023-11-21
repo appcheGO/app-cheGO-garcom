@@ -1,10 +1,10 @@
-import { Box } from '@mui/material';
-import Menu from '../components/Menu/menu';
+import { Box } from "@mui/material";
 
+import CommandWaiter from "./CommandWaiter";
 const Home = () => {
   return (
-    <Box id="menuHome" style={{ display: 'contents' }}>
-      <Menu />
+    <Box id="menuHome" style={{ display: "contents" }}>
+      <CommandWaiter />
     </Box>
   );
 };

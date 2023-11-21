@@ -1,17 +1,17 @@
+
+import { Link } from 'react-router-dom';
 import {
   AppBar,
   Card,
   Container,
-  FormControl,
   Grid,
-  InputLabel,
-  MenuItem,
-  Select,
-  TextField,
   Typography,
 } from '@mui/material';
 
 function CommandWaiter() {
+  
+  const mesas = Array.from({ length: 10 }, (_, index) => index + 1);
+
   return (
     <>
       <AppBar
@@ -31,46 +31,31 @@ function CommandWaiter() {
       <Grid
         container
         spacing={2}
-        sx={{ display: 'flex', justifyContent: 'center' }}
+        sx={{ display: 'flex', justifyContent: 'center', marginTop: '120px', padding:"1rem" }}
       >
-        <Grid item xs={10}>
-          <Card
-            sx={{
-              width: '100%',
-              height: '100px',
-              display: 'flex',
-              alignItems: 'center',
-              p: '10px',
-            }}
-          >
-            <TextField
-              variant="standard"
-              label="Nome"
-              fullWidth
-            />
-          </Card>
-        </Grid>
-        <Grid item xs={10}>
-          <FormControl
-            fullWidth
-            sx={{ backgroundColor: '#fff' }}
-          >
-            <InputLabel id="demo-simple-select-label">
-              Mesa
-            </InputLabel>
-            <Select
-              labelId="demo-simple-select-label"
-              id="demo-simple-select"
-              value={''}
-              label="mesa"
-              //   onChange={handleChange}
+        {mesas.map((mesa) => (
+          <Grid key={mesa} item xs={6} sm={4} md={3} lg={2}>
+            <Card
+              component={Link} 
+              to={`/mesa/${mesa}`}
+              sx={{
+                width: '100%',
+                height: '80px', 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                p: '10px',
+                textDecoration: 'none',
+                color: 'inherit',
+                border: '1px solid #ccc',
+                borderRadius: '8px',
+                cursor: 'pointer',
+              }}
             >
-              <MenuItem value={1}>1</MenuItem>
-              <MenuItem value={2}>2</MenuItem>
-              <MenuItem value={3}>3</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
+              <Typography variant="h6">{`Mesa ${mesa}`}</Typography>
+            </Card>
+          </Grid>
+        ))}
       </Grid>
     </>
   );

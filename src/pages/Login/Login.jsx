@@ -1,17 +1,7 @@
-/* eslint-disable no-unused-vars */
-import {
-  Button,
-  Container,
-  Grid,
-  TextField,
-  Typography,
-} from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import {
-  getAuth,
-  signInWithEmailAndPassword,
-} from 'firebase/auth';
+import { Button, Container, Grid, TextField, Typography } from '@mui/material';
+import { Link, useNavigate } from 'react-router-dom';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -19,48 +9,35 @@ import * as yup from 'yup';
 
 const schema = yup
   .object({
-    email: yup.string().required().email(),
-    password: yup.string().required(),
+    email: yup.string().required('Email é obrigatório').email('Email inválido'),
+    password: yup.string().required('Senha é obrigatória'),
   })
   .required();
 
 export const Login = () => {
-  // const {
-  //   handleSignIn,
-  //   email,
-  //   setEmail,
-  //   password,
-  //   setPassword,
-  // } = useLogin;
+  const [apiError, setApiError] = useState('');
+  const navigate = useNavigate();
 
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm({
     resolver: yupResolver(schema),
   });
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  const navigate = useNavigate();
-
-  const onSubmit = async () => {
+  const onSubmit = async (data) => {
+    const { email, password } = data;
     const auth = getAuth();
+
     try {
-      const userCredential =
-        await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       navigate('/menu');
       console.log(user, 'user');
     } catch (error) {
       console.error(error);
+      setApiError('Erro ao fazer login. Verifique suas credenciais.');
     }
   };
 
@@ -121,20 +98,18 @@ export const Login = () => {
               type="email"
               label="Email"
               variant="standard"
-              onChange={(e) => {
-                setEmail(e.target.value);
-              }}
               {...register('email')}
+              error={!!errors.email}
+              helperText={errors.email?.message}
             />
-            <p>{errors.email?.message}</p>
             <TextField
               type="password"
               label="Senha"
               variant="standard"
-              onChange={(e) => setPassword(e.target.value)}
               {...register('password')}
+              error={!!errors.password}
+              helperText={errors.password?.message}
             />
-            <p>{errors.password?.message}</p>
           </Grid>
           <Grid
             container
@@ -151,7 +126,7 @@ export const Login = () => {
                   textAlign: 'center',
                 }}
               >
-                <Link style={{ textDecoration: 'none' }}>
+                <Link to="#" style={{ textDecoration: 'none' }}>
                   Esqueceu a senha?
                 </Link>
               </Typography>
@@ -180,6 +155,12 @@ export const Login = () => {
             </Grid>
           </Grid>
         </form>
+
+        {apiError && (
+          <Typography color="error" sx={{ textAlign: 'center', mt: 2 }}>
+            {apiError}
+          </Typography>
+        )}
       </Grid>
     </Container>
   );
