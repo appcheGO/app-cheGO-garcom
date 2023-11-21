@@ -25,11 +25,11 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import Header from "../Header/header";
+
 import "./menu.css";
 import { useCarrinho } from "../../context/useCarrinho";
 import { useFormat } from "./../../utils/useFormat";
-import Cart from "../Cart/cart";
+
 
 const schema = Yup.object().shape({
   refrigeranteDoCombo: Yup.string()
@@ -268,7 +268,7 @@ export default function Menu() {
           justifyContent: "center",
         }}
       >
-        <Header />
+       
       </Box>
 
       <Tabs
@@ -620,9 +620,7 @@ export default function Menu() {
               ))}
         </CustomTabPanel>
       </Box>
-      <Box id="footer">
-        <Cart />
-      </Box>
+     
 
       {/*---- Fazendo isso para separar o modal pra nao confundir( a partir daqui tem dois modais)*/}
 
