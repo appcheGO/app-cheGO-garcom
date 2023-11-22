@@ -21,8 +21,9 @@ import {
   MenuItem,
 } from "@mui/material";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
+import { useCart } from "../context/useCarrinho";
 
-// Inicialize o Firebase com a configuração do seu projeto
 const firebaseConfig = {
   apiKey: "AIzaSyCtUEJucj4FgNrJgwLhcpzZ7OJVCqjM8ls",
   authDomain: "testeapp-666bc.firebaseapp.com",
@@ -30,7 +31,6 @@ const firebaseConfig = {
   storageBucket: "testeapp-666bc.appspot.com",
   messagingSenderId: "273940847816",
   appId: "1:273940847816:web:7d5c1f136cb8cac3c159fd",
-  // Sua configuração do Firebase aqui
 };
 
 const app = initializeApp(firebaseConfig);
@@ -42,10 +42,10 @@ function CommandWaiter() {
   const [showModal, setShowModal] = useState(false);
   const [peopleCount, setPeopleCount] = useState(1);
   const [currentUser, setCurrentUser] = useState(null);
+  const { cartState, dispatch } = useCart();
   const [selectedTable, setSelectedTable] = useState(null);
-  const [selectedItems, setSelectedItems] = useState([]);
+  const navigate = useNavigate();
 
-  // Use useEffect para buscar a quantidade de mesas quando o componente é montado
   useEffect(() => {
     const fetchNumMesas = async () => {
       const mesasCollectionRef = collection(firestore, "PEDIDOS MESAS");
@@ -55,13 +55,11 @@ function CommandWaiter() {
 
     fetchNumMesas();
 
-    // Configurar o listener para mudanças no estado de autenticação
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
     });
 
-    // Limpar o listener ao desmontar o componente
     return () => unsubscribe();
   }, []);
 
@@ -70,7 +68,6 @@ function CommandWaiter() {
     const mesaDocSnap = await getDoc(mesaDocRef);
 
     if (mesaDocSnap.exists()) {
-      // Verifique se a subcoleção "STATUS" tem algum documento
       const statusCollectionRef = collection(
         firestore,
         `PEDIDOS MESAS/MESA ${mesa}/STATUS`
@@ -108,20 +105,18 @@ function CommandWaiter() {
   };
 
   const handleAddPedido = async () => {
-    // Adicione lógica para enviar selectedItems para a coleção correspondente à mesa selecionada
-    const mesaCollectionRef = collection(
-      firestore,
-      `PEDIDOS MESAS/MESA ${selectedTable}/STATUS/`
-    );
+    if (selectedTable) {
+      const mesaCollectionRef = collection(
+        firestore,
+        `PEDIDOS MESAS/MESA ${selectedTable}/STATUS`
+      );
 
-    // Exemplo: Adicione os itens ao documento da mesa
-    await addDoc(mesaCollectionRef, { itens: selectedItems });
+      await addDoc(mesaCollectionRef, { itens: cartState.items });
 
-    // Limpe os itens selecionados
-    setSelectedItems([]);
+      dispatch({ type: "CLEAR_CART" });
 
-    // Feche o modal
-    handleCloseModal();
+      navigate(`/cardapio/${selectedTable}`);
+    }
   };
 
   return (

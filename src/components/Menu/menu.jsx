@@ -1,4 +1,5 @@
 /* eslint-disable react-hooks/rules-of-hooks */
+import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 // eslint-disable-next-line no-unused-vars
 import PropTypes from "prop-types";
@@ -12,7 +13,7 @@ import Image3 from "../../../public/hamburguer.png";
 import Image4 from "../../../public/comida-mexicana.png";
 import Image5 from "../../../public/refrigerantes.png";
 import SearchIcon from "@mui/icons-material/Search";
-
+import { useCart } from "../../context/useCarrinho";
 import * as Yup from "yup";
 import {
   Button,
@@ -29,6 +30,17 @@ import {
 import "./menu.css";
 
 import { useFormat } from "./../../utils/useFormat";
+import {
+  addDoc,
+  collection,
+  getDocs,
+  getFirestore,
+  limit,
+  orderBy,
+  query,
+  updateDoc,
+} from "firebase/firestore";
+import { initializeApp } from "firebase/app";
 
 const schema = Yup.object().shape({
   refrigeranteDoCombo: Yup.string()
@@ -59,6 +71,22 @@ CustomTabPanel.propTypes = {
 };
 
 export default function Menu() {
+  const firebaseConfig = {
+    apiKey: "AIzaSyCtUEJucj4FgNrJgwLhcpzZ7OJVCqjM8ls",
+    authDomain: "testeapp-666bc.firebaseapp.com",
+    projectId: "testeapp-666bc",
+    storageBucket: "testeapp-666bc.appspot.com",
+    messagingSenderId: "273940847816",
+    appId: "1:273940847816:web:7d5c1f136cb8cac3c159fd",
+  };
+
+  const app = initializeApp(firebaseConfig);
+
+  const firestore = getFirestore(app);
+
+  const { mesa } = useParams();
+
+  useEffect(() => {}, [mesa]);
   const [value, setValue] = useState(0);
   const [searchValue, setSearchValue] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -72,26 +100,21 @@ export default function Menu() {
   const [adicional, setAdicional] = useState([]);
   const [refrigeranteError, setRefrigeranteError] = useState("");
   const [bordaOptions, setBordaOptions] = useState([]);
-
+  const { addToCart, cartState } = useCart();
   const [firebaseData, setFirebaseData] = useState({});
   useEffect(() => {
     fetch(`https://testeapp-666bc-default-rtdb.firebaseio.com/.json`)
       .then((response) => response.json())
       .then((data) => {
         setFirebaseData(data);
-        console.log("Dados do Firebase:", data);
 
         const bordaOptions = data.opcionais[activeTab] || [];
         setBordaOptions(bordaOptions);
-        console.log("Opcionais do Firebase:", bordaOptions);
       })
       .catch((error) => {
         console.error("Erro ao buscar dados:", error);
       });
   }, [activeTab]);
-
-  console.log("borda inferior, :", bordaOptions);
-  console.log([activeTab]);
 
   useEffect(() => {
     let objGenerico = [];
@@ -134,11 +157,20 @@ export default function Menu() {
     }
   };
 
-  const openConfirmationModal = (item) => {
+  const openConfirmationModal = (item, numeroDaMesaSelecionada) => {
     setItemToAdd(item);
     setrefrigeranteDoCombo("");
     setOpcionais("");
     setObservacao("");
+    addToCart(item, mesa);
+    adicionarItensAMesa(numeroDaMesaSelecionada);
+    if (value === 0 && activeTab === "combos") {
+      setIsModalOpen(true);
+    } else if (value !== 4 && activeTab !== "bebidas") {
+      setIsSegundoModalOpen(true);
+    } else {
+      //
+    }
   };
 
   const handleSearchInputChange = (e) => {
@@ -156,6 +188,78 @@ export default function Menu() {
 
   window.onload = function () {
     sessionStorage.clear();
+  };
+  const adicionarItensAMesa = async (numeroDaMesaSelecionada) => {
+    setObservacao(observacao);
+
+    if (numeroDaMesaSelecionada) {
+      const mesaCollectionRef = collection(
+        firestore,
+        `PEDIDOS MESAS/MESA ${numeroDaMesaSelecionada}/STATUS`
+      );
+
+      const consulta = query(
+        mesaCollectionRef,
+        orderBy("idPedido", "desc"),
+        limit(1)
+      );
+      const resultadoConsulta = await getDocs(consulta);
+
+      let idDoPedido;
+
+      if (resultadoConsulta.size > 0) {
+        const documentoExistente = resultadoConsulta.docs[0];
+        idDoPedido = documentoExistente.data().idPedido;
+        const adicionalSelected = adicional.filter((item) => item.qtde > 0);
+
+        const valorOpcional = parseFloat(opcionais.split("_")[1]);
+
+        const opcionalSelecionado = opcionais.split("_")[0];
+
+        const itensExistente = documentoExistente.data().Pedido || [];
+        const novosItens = cartState.items.map((item) => ({
+          ...item,
+          refrigeranteDoCombo: refrigeranteDoCombo || "",
+          opcionais: opcionalSelecionado || "",
+          Valorpcional: valorOpcional || "",
+          adicional: adicionalSelected || "",
+          observacao: observacao || "",
+        }));
+
+        
+        /*problema que fica acrescentando o item anterior ao pedido*/
+        await updateDoc(documentoExistente.ref, {
+          Pedido: [...itensExistente, ...novosItens],
+        });
+        /*problema que fica acrescentando o item anterior ao pedido*/
+
+
+      } else {
+        const dataAtual = new Date();
+        idDoPedido = `${dataAtual.getDate()}${
+          dataAtual.getMonth() + 1
+        }${dataAtual.getFullYear()}${dataAtual.getHours()}${dataAtual.getMinutes()}${dataAtual.getSeconds()}`;
+        const adicionalSelected = adicional.filter((item) => item.qtde > 0);
+
+        const valorOpcional = parseFloat(opcionais.split("_")[1]);
+
+        const opcionalSelecionado = opcionais.split("_")[0];
+
+        const novosItens = cartState.items.map((item) => ({
+          ...item,
+          refrigeranteDoCombo: refrigeranteDoCombo || "",
+          opcionais: opcionalSelecionado || "",
+          Valorpcional: valorOpcional || "",
+          adicional: adicionalSelected || "",
+          observacao: observacao || "",
+        }));
+
+        await addDoc(mesaCollectionRef, {
+          idPedido: idDoPedido,
+          Pedido: novosItens,
+        });
+      }
+    }
   };
 
   return (
@@ -845,8 +949,14 @@ export default function Menu() {
               onClick={() => {
                 if (!opcionais) {
                   setRefrigeranteError("Escolha um opcional");
+                } else if (!observacao) {
+                  setRefrigeranteError("Adicione uma observação");
                 } else {
-                  setRefrigeranteError("");
+                  if (adicional.length > 0 && observacao.trim() !== "") {
+                    setRefrigeranteError("");
+
+                    adicionarItensAMesa(mesa);
+                  }
                 }
               }}
             >
