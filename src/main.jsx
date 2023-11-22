@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import { LoginProvider } from './context/useLogin.jsx';
+import { CartProvider } from './context/useCarrinho.jsx';
 
 // import {
 //   // eslint-disable-next-line no-unused-vars
@@ -56,8 +57,10 @@ import { LoginProvider } from './context/useLogin.jsx';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
+    <CartProvider>
     <LoginProvider>
       <App />
     </LoginProvider>
+    </CartProvider>
   </React.StrictMode>
 );

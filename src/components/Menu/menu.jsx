@@ -1,4 +1,5 @@
 /* eslint-disable react-hooks/rules-of-hooks */
+import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 // eslint-disable-next-line no-unused-vars
 import PropTypes from "prop-types";
@@ -12,7 +13,7 @@ import Image3 from "../../../public/hamburguer.png";
 import Image4 from "../../../public/comida-mexicana.png";
 import Image5 from "../../../public/refrigerantes.png";
 import SearchIcon from "@mui/icons-material/Search";
-
+import { useCart } from "../../context/useCarrinho";
 import * as Yup from "yup";
 import {
   Button,
@@ -27,9 +28,19 @@ import {
 } from "@mui/material";
 
 import "./menu.css";
-import { useCarrinho } from "../../context/useCarrinho";
-import { useFormat } from "./../../utils/useFormat";
 
+import { useFormat } from "./../../utils/useFormat";
+import {
+  addDoc,
+  collection,
+  getDocs,
+  getFirestore,
+  limit,
+  orderBy,
+  query,
+  updateDoc,
+} from "firebase/firestore";
+import { initializeApp } from "firebase/app";
 
 const schema = Yup.object().shape({
   refrigeranteDoCombo: Yup.string()
@@ -60,11 +71,27 @@ CustomTabPanel.propTypes = {
 };
 
 export default function Menu() {
+  const firebaseConfig = {
+    apiKey: "AIzaSyCtUEJucj4FgNrJgwLhcpzZ7OJVCqjM8ls",
+    authDomain: "testeapp-666bc.firebaseapp.com",
+    projectId: "testeapp-666bc",
+    storageBucket: "testeapp-666bc.appspot.com",
+    messagingSenderId: "273940847816",
+    appId: "1:273940847816:web:7d5c1f136cb8cac3c159fd",
+  };
+
+  const app = initializeApp(firebaseConfig);
+
+  const firestore = getFirestore(app);
+
+  const { mesa } = useParams();
+
+  useEffect(() => {}, [mesa]);
   const [value, setValue] = useState(0);
   const [searchValue, setSearchValue] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemToAdd, setItemToAdd] = useState(null);
-  const { addToCart, cart } = useCarrinho();
+
   const [refrigeranteDoCombo, setrefrigeranteDoCombo] = useState("");
   const [isSegundoModalOpen, setIsSegundoModalOpen] = useState(false);
   const [observacao, setObservacao] = useState("");
@@ -73,26 +100,21 @@ export default function Menu() {
   const [adicional, setAdicional] = useState([]);
   const [refrigeranteError, setRefrigeranteError] = useState("");
   const [bordaOptions, setBordaOptions] = useState([]);
-
+  const { addToCart, cartState } = useCart();
   const [firebaseData, setFirebaseData] = useState({});
   useEffect(() => {
     fetch(`https://testeapp-666bc-default-rtdb.firebaseio.com/.json`)
       .then((response) => response.json())
       .then((data) => {
         setFirebaseData(data);
-        console.log("Dados do Firebase:", data);
 
         const bordaOptions = data.opcionais[activeTab] || [];
         setBordaOptions(bordaOptions);
-        console.log("Opcionais do Firebase:", bordaOptions);
       })
       .catch((error) => {
         console.error("Erro ao buscar dados:", error);
       });
   }, [activeTab]);
-
-  console.log("borda inferior, :", bordaOptions);
-  console.log([activeTab]);
 
   useEffect(() => {
     let objGenerico = [];
@@ -113,69 +135,6 @@ export default function Menu() {
 
     setObservacao("");
   }, [activeTab, firebaseData]);
-
-  const modalCheckout = () => {
-    const adicionais = adicional.filter((item) => item.qtde > 0);
-    const totais = adicionais.map((item) => ({
-      ...item,
-      total: item.valor * item.qtde,
-    }));
-
-    // const valorOpcional = bordaOptions.map((item) => item.valorAdc);
-    const valorOpcional = parseFloat(opcionais.split("_")[1]);
-    console.log("valor do opcional" + typeof valorOpcional);
-
-    // const opcionalSelecionado = bordaOptions.map((item) => item.opcao);
-    const opcionalSelecionado = opcionais.split("_")[0];
-    console.log("Novo opcional", opcionalSelecionado);
-
-    const valorTotalAdicionais =
-      totais.length > 0
-        ? totais
-            .map((item) => item.total)
-            .reduce((accumulator, currentValue) => accumulator + currentValue)
-        : 0;
-    const valorTotalDoProduto =
-      valorTotalAdicionais + itemToAdd.valor + valorOpcional;
-
-    const itemToAddWithQuantity = {
-      ...itemToAdd,
-      refrigeranteDoCombo,
-      observacao,
-      opcionalSelecionado,
-      valorOpcional,
-      adicionais: totais,
-      valorTotalAdicionais,
-      valorTotalDoProduto,
-    };
-
-    console.log(itemToAddWithQuantity);
-
-    const itemExistsInCart = cart.find((item) => {
-      return (
-        item.sabor === itemToAddWithQuantity.sabor &&
-        item.refrigeranteDoCombo ===
-          itemToAddWithQuantity.refrigeranteDoCombo &&
-        item.opcionais === itemToAddWithQuantity.opcionais &&
-        JSON.stringify(item.adicionais) ===
-          JSON.stringify(itemToAddWithQuantity.adicionais)
-      );
-    });
-
-    if (itemExistsInCart) {
-      addToCart(itemToAddWithQuantity);
-      setIsModalOpen(false);
-      setIsSegundoModalOpen(false);
-    } else {
-      addToCart(itemToAddWithQuantity);
-      setIsModalOpen(false);
-      setIsSegundoModalOpen(false);
-
-      const cpy = [...adicional];
-      cpy.forEach((item) => (item.qtde = 0));
-      setAdicional(cpy);
-    }
-  };
 
   const handleIngredientIncrement = (ingredient) => {
     let copia = [...adicional];
@@ -198,43 +157,19 @@ export default function Menu() {
     }
   };
 
-  const openConfirmationModal = (item) => {
+  const openConfirmationModal = (item, numeroDaMesaSelecionada) => {
     setItemToAdd(item);
     setrefrigeranteDoCombo("");
     setOpcionais("");
     setObservacao("");
-
-    if (activeTab === "bebidas") {
-      if (item) {
-        const itemToAddWithQuantity = {
-          ...item,
-          refrigeranteDoCombo,
-          observacao,
-          opcionais: 0,
-          adicionais: [],
-          valorTotalAdicionais: 0,
-          valorTotalDoProduto: item.valor,
-        };
-        addToCart(itemToAddWithQuantity);
-      }
-    } else if (activeTab === "combos") {
-      if (item && adicional.length === 0) {
-        const itemToAddWithQuantity = {
-          ...item,
-          refrigeranteDoCombo,
-          observacao,
-          opcionais,
-          adicionais: [],
-          valorTotalAdicionais: 0,
-          valorTotalDoProduto:
-            item.valor + item.valorTotalAdicionais + item.valorOpcional,
-        };
-        addToCart(itemToAddWithQuantity);
-      } else {
-        setIsModalOpen(true);
-      }
-    } else {
+    addToCart(item, mesa);
+    adicionarItensAMesa(numeroDaMesaSelecionada);
+    if (value === 0 && activeTab === "combos") {
+      setIsModalOpen(true);
+    } else if (value !== 4 && activeTab !== "bebidas") {
       setIsSegundoModalOpen(true);
+    } else {
+      //
     }
   };
 
@@ -254,23 +189,81 @@ export default function Menu() {
   window.onload = function () {
     sessionStorage.clear();
   };
+  const adicionarItensAMesa = async (numeroDaMesaSelecionada) => {
+    setObservacao(observacao);
+
+    if (numeroDaMesaSelecionada) {
+      const mesaCollectionRef = collection(
+        firestore,
+        `PEDIDOS MESAS/MESA ${numeroDaMesaSelecionada}/STATUS`
+      );
+
+      const consulta = query(
+        mesaCollectionRef,
+        orderBy("idPedido", "desc"),
+        limit(1)
+      );
+      const resultadoConsulta = await getDocs(consulta);
+
+      let idDoPedido;
+
+      if (resultadoConsulta.size > 0) {
+        const documentoExistente = resultadoConsulta.docs[0];
+        idDoPedido = documentoExistente.data().idPedido;
+        const adicionalSelected = adicional.filter((item) => item.qtde > 0);
+
+        const valorOpcional = parseFloat(opcionais.split("_")[1]);
+
+        const opcionalSelecionado = opcionais.split("_")[0];
+
+        const itensExistente = documentoExistente.data().Pedido || [];
+        const novosItens = cartState.items.map((item) => ({
+          ...item,
+          refrigeranteDoCombo: refrigeranteDoCombo || "",
+          opcionais: opcionalSelecionado || "",
+          Valorpcional: valorOpcional || "",
+          adicional: adicionalSelected || "",
+          observacao: observacao || "",
+        }));
+
+        
+        /*problema que fica acrescentando o item anterior ao pedido*/
+        await updateDoc(documentoExistente.ref, {
+          Pedido: [...itensExistente, ...novosItens],
+        });
+        /*problema que fica acrescentando o item anterior ao pedido*/
+
+
+      } else {
+        const dataAtual = new Date();
+        idDoPedido = `${dataAtual.getDate()}${
+          dataAtual.getMonth() + 1
+        }${dataAtual.getFullYear()}${dataAtual.getHours()}${dataAtual.getMinutes()}${dataAtual.getSeconds()}`;
+        const adicionalSelected = adicional.filter((item) => item.qtde > 0);
+
+        const valorOpcional = parseFloat(opcionais.split("_")[1]);
+
+        const opcionalSelecionado = opcionais.split("_")[0];
+
+        const novosItens = cartState.items.map((item) => ({
+          ...item,
+          refrigeranteDoCombo: refrigeranteDoCombo || "",
+          opcionais: opcionalSelecionado || "",
+          Valorpcional: valorOpcional || "",
+          adicional: adicionalSelected || "",
+          observacao: observacao || "",
+        }));
+
+        await addDoc(mesaCollectionRef, {
+          idPedido: idDoPedido,
+          Pedido: novosItens,
+        });
+      }
+    }
+  };
 
   return (
     <>
-      <Box
-        id="header"
-        sx={{
-          display: "flex",
-          width: "100%",
-          height: "11rem",
-          minHeight: "7rem",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-       
-      </Box>
-
       <Tabs
         id="sectionsmenu"
         value={value}
@@ -334,22 +327,12 @@ export default function Menu() {
       >
         <SearchIcon className="iconSearchFilterMenu" />
         <TextField
-          label="Ta com fome de quê?"
+          label="Procurar Item"
           variant="outlined"
           onChange={handleSearchInputChange}
         />
       </Box>
-      <Box
-        sx={{
-          position: "relative",
-          bottom: "2.7rem",
-          width: "100%",
-          maxWidth: "600px",
-          minHeight: "2.5rem",
-          borderRadius: " 35px 35px 0 0",
-          zIndex: "2",
-        }}
-      ></Box>
+
       <Box
         id="contentmenu"
         sx={{
@@ -363,14 +346,14 @@ export default function Menu() {
         <CustomTabPanel
           sx={{
             position: "absolute",
-            top: "15rem",
+
             height: "100%",
             minHeight: "340px",
             width: "100%",
             minWidth: "320px",
             overflow: "auto",
             zIndex: "1",
-            padding: " 15px 13px 19.2rem 13px",
+            padding: " 15px 13px 11rem 13px",
           }}
           value={value}
           index={0}
@@ -417,14 +400,13 @@ export default function Menu() {
           index={1}
           sx={{
             position: "absolute",
-            top: "15rem",
             height: "100%",
             minHeight: "340px",
             width: "100%",
             minWidth: "320px",
             overflow: "auto",
             zIndex: "1",
-            padding: " 15px 13px 19.2rem 13px",
+            padding: " 15px 13px 11rem 13px",
           }}
         >
           {firebaseData.pizzas &&
@@ -469,14 +451,14 @@ export default function Menu() {
           index={2}
           sx={{
             position: "absolute",
-            top: "15rem",
+
             height: "100%",
             minHeight: "340px",
             width: "100%",
             minWidth: "320px",
             overflow: "auto",
             zIndex: "1",
-            padding: " 15px 13px 19.2rem 13px",
+            padding: " 15px 13px 11rem 13px",
           }}
         >
           {firebaseData.hamburger &&
@@ -521,14 +503,14 @@ export default function Menu() {
           index={3}
           sx={{
             position: "absolute",
-            top: "15rem",
+
             height: "100%",
             minHeight: "340px",
             width: "100%",
             minWidth: "320px",
             overflow: "auto",
             zIndex: "1",
-            padding: " 15px 13px 19.2rem 13px",
+            padding: " 15px 13px 11rem 13px",
           }}
         >
           {firebaseData.paoArabe &&
@@ -573,14 +555,14 @@ export default function Menu() {
           index={4}
           sx={{
             position: "absolute",
-            top: "15rem",
+
             height: "100%",
             minHeight: "340px",
             width: "100%",
             minWidth: "320px",
             overflow: "auto",
             zIndex: "1",
-            padding: " 15px 13px 19.2rem 13px",
+            padding: " 15px 13px 11rem 13px",
           }}
         >
           {firebaseData.drinks &&
@@ -620,7 +602,6 @@ export default function Menu() {
               ))}
         </CustomTabPanel>
       </Box>
-     
 
       {/*---- Fazendo isso para separar o modal pra nao confundir( a partir daqui tem dois modais)*/}
 
@@ -968,9 +949,14 @@ export default function Menu() {
               onClick={() => {
                 if (!opcionais) {
                   setRefrigeranteError("Escolha um opcional");
+                } else if (!observacao) {
+                  setRefrigeranteError("Adicione uma observação");
                 } else {
-                  modalCheckout();
-                  setRefrigeranteError("");
+                  if (adicional.length > 0 && observacao.trim() !== "") {
+                    setRefrigeranteError("");
+
+                    adicionarItensAMesa(mesa);
+                  }
                 }
               }}
             >
