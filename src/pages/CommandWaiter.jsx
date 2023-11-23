@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 import { useState, useEffect } from "react";
 import { initializeApp } from "firebase/app";
 import {
@@ -7,6 +8,9 @@ import {
   collection,
   getDocs,
   addDoc,
+  query,
+  limit,
+  updateDoc,
 } from "firebase/firestore";
 import {
   AppBar,
@@ -20,9 +24,13 @@ import {
   Select,
   MenuItem,
 } from "@mui/material";
+import FormatListBulletedIcon from "@mui/icons-material/FormatListBulleted";
+import AddIcon from "@mui/icons-material/Add";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/useCarrinho";
+import { orderBy } from "lodash";
+import { useFormat } from "../utils/useFormat";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCtUEJucj4FgNrJgwLhcpzZ7OJVCqjM8ls",
@@ -44,6 +52,9 @@ function CommandWaiter() {
   const [currentUser, setCurrentUser] = useState(null);
   const { cartState, dispatch } = useCart();
   const [selectedTable, setSelectedTable] = useState(null);
+  const [showPedidoDetailsModal, setShowPedidoDetailsModal] = useState(false);
+  const [selectedPedido, setSelectedPedido] = useState(null);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -89,6 +100,26 @@ function CommandWaiter() {
       fetchMesaStatus(mesa);
     }
   };
+  const handleOpenModalListaItens = async (table) => {
+    setSelectedTable(table);
+
+    const mesaCollectionRef = collection(
+      firestore,
+      `PEDIDOS MESAS/MESA ${table}/STATUS`
+    );
+
+    const consulta = query(mesaCollectionRef, orderBy("idPedido", "asc"));
+    const resultadoConsulta = await getDocs(consulta);
+
+    if (resultadoConsulta.size > 0) {
+      const documentoExistente = resultadoConsulta.docs[0];
+      const pedidoData = documentoExistente.data();
+      setSelectedPedido(pedidoData);
+      setShowPedidoDetailsModal(true);
+    } else {
+      console.log("Não foram encontrados pedidos para esta mesa.");
+    }
+  };
 
   const handleOpenModal = (table) => {
     setSelectedTable(table);
@@ -111,7 +142,33 @@ function CommandWaiter() {
         `PEDIDOS MESAS/MESA ${selectedTable}/STATUS`
       );
 
-      await addDoc(mesaCollectionRef, { itens: cartState.items });
+      const consulta = query(
+        mesaCollectionRef,
+        orderBy("idPedido", "desc"),
+        limit(1)
+      );
+      const resultadoConsulta = await getDocs(consulta);
+
+      let idDoPedido;
+
+      if (resultadoConsulta.size > 0) {
+        const documentoExistente = resultadoConsulta.docs[0];
+        idDoPedido = documentoExistente.data().idPedido;
+
+        await updateDoc(documentoExistente.ref, {
+          Pedido: [...documentoExistente.data().Pedido, ...cartState.items],
+        });
+      } else {
+        const dataAtual = new Date();
+        idDoPedido = `${dataAtual.getDate()}${
+          dataAtual.getMonth() + 1
+        }${dataAtual.getFullYear()}${dataAtual.getHours()}${dataAtual.getMinutes()}${dataAtual.getSeconds()}`;
+
+        await addDoc(mesaCollectionRef, {
+          idPedido: idDoPedido,
+          Pedido: cartState.items,
+        });
+      }
 
       dispatch({ type: "CLEAR_CART" });
 
@@ -131,21 +188,15 @@ function CommandWaiter() {
           textAlign: "center",
         }}
       >
-        <Container>
-          <Typography>Bem vindo</Typography>
-        </Container>
-      </AppBar>
-      <Grid
-        container
-        spacing={2}
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          marginTop: "120px",
-          padding: "1rem",
-        }}
-      >
-        <Grid item xs={12}>
+        <Container
+          sx={{
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-evenly",
+          }}
+        >
+          <Typography variant="h6">Bem vindo</Typography>
           <Button
             variant="contained"
             color="primary"
@@ -153,44 +204,172 @@ function CommandWaiter() {
           >
             Atualizar Status
           </Button>
-        </Grid>
+        </Container>
+      </AppBar>
+      <Grid
+        container
+        spacing={2}
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginTop: "120px",
+          padding: "1rem",
+        }}
+      >
+        <Grid item xs={12}></Grid>
         {Array.from({ length: numMesas }, (_, index) => index + 1).map(
           (mesa) => (
             <Grid key={mesa} item xs={6} sm={4} md={3} lg={2}>
               <Card
-                onClick={() => handleOpenModal(mesa)}
                 sx={{
                   width: "100%",
-                  height: "80px",
+                  height: "150px",
                   display: "flex",
+                  flexDirection: "row",
                   alignItems: "center",
-                  justifyContent: "center",
+                  justifyContent: "space-between",
                   p: "10px",
                   textDecoration: "none",
-                  color: "inherit",
+                  color: "white",
                   border: "1px solid #ccc",
                   borderRadius: "8px",
-                  cursor: "pointer",
                   backgroundColor:
                     mesaStatus[mesa] === "LIVRE" ? "green" : "red",
                 }}
               >
                 <Typography variant="h6">{`Mesa ${mesa}`}</Typography>
+                <Box
+                  sx={{
+                    width: "20%",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  {mesaStatus[mesa] === "OCUPADA" && (
+                    <FormatListBulletedIcon
+                      titleAccess="itens do pedido"
+                      label="itens do pedido"
+                      sx={{
+                        width: "100%",
+                        height: "50%",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => handleOpenModalListaItens(mesa)}
+                    />
+                  )}
+                  <AddIcon
+                    titleAccess="Adicionar itens ao pedido"
+                    label="Adicionar itens ao pedido"
+                    sx={{
+                      width: "100%",
+                      height: "50%",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => handleOpenModal(mesa)}
+                  />
+                </Box>
               </Card>
             </Grid>
           )
         )}
       </Grid>
 
-      {/* Modal */}
-      <Modal open={showModal} onClose={handleCloseModal}>
+      <Modal
+        open={showPedidoDetailsModal}
+        onClose={() => setShowPedidoDetailsModal(false)}
+      >
         <Box
           sx={{
+            overflow: "auto",
+            height: "90%",
+            width: "90%",
+            maxWidth: "700px",
             position: "absolute",
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            width: 400,
+            bgcolor: "background.paper",
+            boxShadow: 24,
+            p: 4,
+          }}
+        >
+          <Typography variant="h6" component="div">
+            Detalhes do Pedido
+            <p>Mesa: {selectedTable}</p>
+            {selectedPedido && (
+              <div>
+                <Typography variant="subtitle1">
+                  ID do Pedido: {selectedPedido.idPedido}
+                </Typography>
+
+                {selectedPedido && selectedPedido.Pedido && (
+                  <div>
+                    {selectedPedido.Pedido.map((pedidoItem, index) => (
+                      <div key={index}>
+                        <p>Sabor: {pedidoItem.item.sabor}</p>
+                        <p>ID do Item: {pedidoItem.item.id}</p>
+                        <p>Ingredientes: {pedidoItem.item.ingredientes}</p>
+                        <p>Valor: {useFormat(pedidoItem.item.valor)}</p>
+                        <p>
+                          Valor Opcional: {useFormat(pedidoItem.Valoropcional)}
+                        </p>
+                        <p>Observação: {pedidoItem.observacao}</p>
+                        <p>Opcionais: {pedidoItem.opcionais}</p>
+                        <p>
+                          Refrigerante do Combo:
+                          {pedidoItem.refrigeranteDoCombo}
+                        </p>
+
+                        <p>Itens Adicionais:</p>
+                        {pedidoItem.adicional && (
+                          <ul>
+                            {pedidoItem.adicional.map(
+                              (adicionalItem, adicionalIndex) => (
+                                <li
+                                  style={{ listStyle: "none" }}
+                                  key={adicionalIndex}
+                                >
+                                  {adicionalItem.name}-({adicionalItem.qtde}x)-
+                                  {useFormat(adicionalItem.valor)}
+                                </li>
+                              )
+                            )}
+                          </ul>
+                        )}
+
+                        <hr />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </Typography>
+
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setShowPedidoDetailsModal(false)}
+            sx={{ mt: 2 }}
+          >
+            Fechar
+          </Button>
+        </Box>
+      </Modal>
+
+      <Modal open={showModal} onClose={handleCloseModal}>
+        <Box
+          sx={{
+            width: "90%",
+            maxWidth: "700px",
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+
             bgcolor: "background.paper",
             boxShadow: 24,
             p: 4,
@@ -199,6 +378,7 @@ function CommandWaiter() {
           <Typography variant="h6" component="div">
             Adicionar Pedido
           </Typography>
+
           {currentUser && (
             <Typography variant="subtitle1" sx={{ mt: 2 }}>
               Usuário : {currentUser.email}

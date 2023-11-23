@@ -13,6 +13,7 @@ import Image3 from "../../../public/hamburguer.png";
 import Image4 from "../../../public/comida-mexicana.png";
 import Image5 from "../../../public/refrigerantes.png";
 import SearchIcon from "@mui/icons-material/Search";
+
 import { useCart } from "../../context/useCarrinho";
 import * as Yup from "yup";
 import {
@@ -221,19 +222,16 @@ export default function Menu() {
           ...item,
           refrigeranteDoCombo: refrigeranteDoCombo || "",
           opcionais: opcionalSelecionado || "",
-          Valorpcional: valorOpcional || "",
+          Valoropcional: valorOpcional || "",
           adicional: adicionalSelected || "",
           observacao: observacao || "",
         }));
 
-        
         /*problema que fica acrescentando o item anterior ao pedido*/
         await updateDoc(documentoExistente.ref, {
           Pedido: [...itensExistente, ...novosItens],
         });
         /*problema que fica acrescentando o item anterior ao pedido*/
-
-
       } else {
         const dataAtual = new Date();
         idDoPedido = `${dataAtual.getDate()}${
@@ -249,7 +247,7 @@ export default function Menu() {
           ...item,
           refrigeranteDoCombo: refrigeranteDoCombo || "",
           opcionais: opcionalSelecionado || "",
-          Valorpcional: valorOpcional || "",
+          Valoropcional: valorOpcional || "",
           adicional: adicionalSelected || "",
           observacao: observacao || "",
         }));
@@ -949,14 +947,10 @@ export default function Menu() {
               onClick={() => {
                 if (!opcionais) {
                   setRefrigeranteError("Escolha um opcional");
-                } else if (!observacao) {
-                  setRefrigeranteError("Adicione uma observação");
                 } else {
-                  if (adicional.length > 0 && observacao.trim() !== "") {
-                    setRefrigeranteError("");
+                  setRefrigeranteError(""); // Limpe o erro se uma escolha opcional foi feita
 
-                    adicionarItensAMesa(mesa);
-                  }
+                  adicionarItensAMesa(mesa);
                 }
               }}
             >
