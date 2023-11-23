@@ -150,13 +150,22 @@ function CommandWaiter() {
       const resultadoConsulta = await getDocs(consulta);
 
       let idDoPedido;
+      let dataHoraPedido;
 
       if (resultadoConsulta.size > 0) {
         const documentoExistente = resultadoConsulta.docs[0];
         idDoPedido = documentoExistente.data().idPedido;
+        dataHoraPedido = new Date().toLocaleString();
 
         await updateDoc(documentoExistente.ref, {
-          Pedido: [...documentoExistente.data().Pedido, ...cartState.items],
+          Pedido: [
+            ...documentoExistente.data().Pedido,
+            {
+              ...cartState.items,
+              quantidadeDePessoasNaMesa: peopleCount,
+            },
+          ],
+          dataHoraPedido: dataHoraPedido,
         });
       } else {
         const dataAtual = new Date();
@@ -164,9 +173,18 @@ function CommandWaiter() {
           dataAtual.getMonth() + 1
         }${dataAtual.getFullYear()}${dataAtual.getHours()}${dataAtual.getMinutes()}${dataAtual.getSeconds()}`;
 
+        dataHoraPedido = dataAtual.toLocaleString();
+        currentUser.email;
         await addDoc(mesaCollectionRef, {
           idPedido: idDoPedido,
-          Pedido: cartState.items,
+          Pedido: [
+            {
+              ...cartState.items,
+            },
+          ],
+          quantidadeDePessoasNaMesa: peopleCount,
+          dataHoraPedido: dataHoraPedido,
+          UsuarioQueIniciouOPedido: currentUser.email,
         });
       }
 
@@ -202,7 +220,7 @@ function CommandWaiter() {
             color="primary"
             onClick={handleUpdateStatus}
           >
-            Atualizar Status
+            Atualizar Mesas
           </Button>
         </Container>
       </AppBar>
@@ -216,7 +234,6 @@ function CommandWaiter() {
           padding: "1rem",
         }}
       >
-        <Grid item xs={12}></Grid>
         {Array.from({ length: numMesas }, (_, index) => index + 1).map(
           (mesa) => (
             <Grid key={mesa} item xs={6} sm={4} md={3} lg={2}>
@@ -251,7 +268,6 @@ function CommandWaiter() {
                   {mesaStatus[mesa] === "OCUPADA" && (
                     <FormatListBulletedIcon
                       titleAccess="itens do pedido"
-                      label="itens do pedido"
                       sx={{
                         width: "100%",
                         height: "50%",
@@ -261,8 +277,7 @@ function CommandWaiter() {
                     />
                   )}
                   <AddIcon
-                    titleAccess="Adicionar itens ao pedido"
-                    label="Adicionar itens ao pedido"
+                    titleAccess="Adicionar pedido a mesa"
                     sx={{
                       width: "100%",
                       height: "50%",
@@ -296,58 +311,176 @@ function CommandWaiter() {
             p: 4,
           }}
         >
-          <Typography variant="h6" component="div">
-            Detalhes do Pedido
-            <p>Mesa: {selectedTable}</p>
-            {selectedPedido && (
-              <div>
-                <Typography variant="subtitle1">
-                  ID do Pedido: {selectedPedido.idPedido}
-                </Typography>
-
+          {selectedPedido && (
+            <Typography variant="subtitle2">
+              <Typography variant="h6">Detalhes da comanda</Typography>
+              <Typography variant="h6">Mesa: {selectedTable}</Typography>
+              <Typography variant="h6">
+                Comanda: {selectedPedido.idPedido}
+              </Typography>
+              <Typography variant="h6">
+                Pedido Iniciado : {selectedPedido.dataHoraPedido}
+              </Typography>
+              <hr />
+              <Box>
                 {selectedPedido && selectedPedido.Pedido && (
-                  <div>
+                  <Box>
                     {selectedPedido.Pedido.map((pedidoItem, index) => (
-                      <div key={index}>
-                        <p>Sabor: {pedidoItem.item.sabor}</p>
-                        <p>ID do Item: {pedidoItem.item.id}</p>
-                        <p>Ingredientes: {pedidoItem.item.ingredientes}</p>
-                        <p>Valor: {useFormat(pedidoItem.item.valor)}</p>
+                      <Box key={index}>
                         <p>
-                          Valor Opcional: {useFormat(pedidoItem.Valoropcional)}
+                          Item:{" "}
+                          <span style={{ fontWeight: "200" }}>
+                            {pedidoItem.item.sabor}
+                          </span>
                         </p>
-                        <p>Observação: {pedidoItem.observacao}</p>
-                        <p>Opcionais: {pedidoItem.opcionais}</p>
-                        <p>
-                          Refrigerante do Combo:
-                          {pedidoItem.refrigeranteDoCombo}
-                        </p>
-
-                        <p>Itens Adicionais:</p>
-                        {pedidoItem.adicional && (
-                          <ul>
-                            {pedidoItem.adicional.map(
-                              (adicionalItem, adicionalIndex) => (
-                                <li
-                                  style={{ listStyle: "none" }}
-                                  key={adicionalIndex}
-                                >
-                                  {adicionalItem.name}-({adicionalItem.qtde}x)-
-                                  {useFormat(adicionalItem.valor)}
-                                </li>
-                              )
-                            )}
-                          </ul>
+                        {pedidoItem.refrigeranteDoCombo == "" ? (
+                          <Box />
+                        ) : (
+                          <p>
+                            Refrigerante do Combo:
+                            <span style={{ fontWeight: "200" }}>
+                              {pedidoItem.refrigeranteDoCombo}
+                            </span>
+                          </p>
                         )}
 
+                        <p>
+                          Valor:{" "}
+                          <span style={{ fontWeight: "200" }}>
+                            {useFormat(pedidoItem.item.valor)}
+                          </span>
+                        </p>
+                        <p>
+                          Opcional:{" "}
+                          <span style={{ fontWeight: "200" }}>
+                            {pedidoItem.opcionais}
+                          </span>
+                        </p>
+                        {pedidoItem.Valoropcional == "" ||
+                        pedidoItem.Valoropcional == 0 ? (
+                          <p>
+                            Valor Opcional:
+                            <span style={{ fontWeight: "200" }}>Gratis</span>
+                          </p>
+                        ) : (
+                          <p>
+                            Valor Opcional:{" "}
+                            <span style={{ fontWeight: "200" }}>
+                              {useFormat(pedidoItem.Valoropcional)}
+                            </span>
+                          </p>
+                        )}
+                        {pedidoItem.adicional == 0 ? (
+                          <Box />
+                        ) : (
+                          <p>Itens Adicionais:</p>
+                        )}
+
+                        {pedidoItem.adicional &&
+                          pedidoItem.adicional.length > 0 && (
+                            <ul>
+                              {pedidoItem.adicional.map(
+                                (adicionalItem, adicionalIndex) => (
+                                  // eslint-disable-next-line react/jsx-key
+                                  <span style={{ fontWeight: "200" }}>
+                                    <li
+                                      style={{ listStyle: "none" }}
+                                      key={adicionalIndex}
+                                    >
+                                      {adicionalItem.name}-({adicionalItem.qtde}
+                                      x)-
+                                      {useFormat(adicionalItem.valor)}
+                                    </li>
+                                  </span>
+                                )
+                              )}
+                            </ul>
+                          )}
+                        {pedidoItem.observacao == "" ? (
+                          <Box />
+                        ) : (
+                          <p>
+                            Observação:{" "}
+                            <span style={{ fontWeight: "200" }}>
+                              {pedidoItem.observacao}
+                            </span>
+                          </p>
+                        )}
+
+                        <p>
+                          Quantidade:{" "}
+                          <span style={{ fontWeight: "200" }}>
+                            {pedidoItem.item.quantidade}
+                          </span>
+                        </p>
+                        <p>
+                          Valor total do item:{" "}
+                          <span style={{ fontWeight: "200" }}>
+                            {useFormat(
+                              Number(pedidoItem.item.valor) +
+                                Number(pedidoItem.Valoropcional) +
+                                (pedidoItem.adicional
+                                  ? pedidoItem.adicional.reduce(
+                                      (total, item) =>
+                                        total + Number(item.valor),
+                                      0
+                                    )
+                                  : 0)
+                            )}
+                          </span>
+                        </p>
+
                         <hr />
-                      </div>
+                      </Box>
                     ))}
-                  </div>
+                    <Typography variant="h6">
+                      Valor da comanda:{" "}
+                      {useFormat(
+                        selectedPedido.Pedido.reduce((total, pedidoItem) => {
+                          return (
+                            total +
+                            Number(pedidoItem.item.valor) +
+                            Number(pedidoItem.Valoropcional) +
+                            (pedidoItem.adicional
+                              ? pedidoItem.adicional.reduce(
+                                  (subtotal, item) =>
+                                    subtotal + Number(item.valor),
+                                  0
+                                )
+                              : 0)
+                          );
+                        }, 0)
+                      )}
+                    </Typography>
+                    <Typography variant="subtitle2">
+                      Quantidade de Pessoas na mesa:{" "}
+                      {selectedPedido.quantidadeDePessoasNaMesa}
+                    </Typography>
+                    <Typography variant="subtitle2">
+                      Valor sugerido por pessoa:{" "}
+                      {useFormat(
+                        selectedPedido.Pedido.reduce((total, pedidoItem) => {
+                          return (
+                            (total +
+                              Number(pedidoItem.item.valor) +
+                              Number(pedidoItem.Valoropcional) +
+                              (pedidoItem.adicional
+                                ? pedidoItem.adicional.reduce(
+                                    (subtotal, item) =>
+                                      subtotal + Number(item.valor),
+                                    0
+                                  )
+                                : 0)) /
+                            selectedPedido.quantidadeDePessoasNaMesa
+                          );
+                        }, 0)
+                      )}
+                    </Typography>
+                  </Box>
                 )}
-              </div>
-            )}
-          </Typography>
+              </Box>
+            </Typography>
+          )}
 
           <Button
             variant="contained"
@@ -369,13 +502,12 @@ function CommandWaiter() {
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-
             bgcolor: "background.paper",
             boxShadow: 24,
             p: 4,
           }}
         >
-          <Typography variant="h6" component="div">
+          <Typography variant="h6" component="Box">
             Adicionar Pedido
           </Typography>
 
@@ -384,21 +516,25 @@ function CommandWaiter() {
               Usuário : {currentUser.email}
             </Typography>
           )}
-          <Typography variant="subtitle1" sx={{ mt: 2 }}>
-            Quantidade de pessoas:
-          </Typography>
-          <Select
-            value={peopleCount}
-            onChange={handleInputChange}
-            fullWidth
-            sx={{ mt: 2 }}
-          >
-            {[1, 2, 3, 4, 5].map((count) => (
-              <MenuItem key={count} value={count}>
-                {count}
-              </MenuItem>
-            ))}
-          </Select>
+          {mesaStatus[selectedTable] === "LIVRE" && (
+            <>
+              <Typography variant="subtitle1" sx={{ mt: 2 }}>
+                Quantidade de pessoas:
+              </Typography>
+              <Select
+                value={peopleCount}
+                onChange={handleInputChange}
+                fullWidth
+                sx={{ mt: 2 }}
+              >
+                {[1, 2, 3, 4, 5].map((count) => (
+                  <MenuItem key={count} value={count}>
+                    {count}
+                  </MenuItem>
+                ))}
+              </Select>
+            </>
+          )}
           <Button
             variant="contained"
             color="primary"

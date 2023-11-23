@@ -1,21 +1,21 @@
-import { useState } from 'react';
-import { Button, Container, Grid, TextField, Typography } from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { useState } from "react";
+import { Button, Container, Grid, TextField, Typography } from "@mui/material";
+import { Link, useNavigate } from "react-router-dom";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
 
 const schema = yup
   .object({
-    email: yup.string().required('Email é obrigatório').email('Email inválido'),
-    password: yup.string().required('Senha é obrigatória'),
+    email: yup.string().required("Email é obrigatório").email("Email inválido"),
+    password: yup.string().required("Senha é obrigatória"),
   })
   .required();
 
 export const Login = () => {
-  const [apiError, setApiError] = useState('');
+  const [apiError, setApiError] = useState("");
   const navigate = useNavigate();
 
   const {
@@ -31,32 +31,39 @@ export const Login = () => {
     const auth = getAuth();
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
-      navigate('/menu');
-      console.log(user, 'user');
+      navigate("/menu");
+      console.log(user, "user");
     } catch (error) {
       console.error(error);
-      setApiError('Erro ao fazer login. Verifique suas credenciais.');
+      setApiError("Erro ao fazer login. Verifique suas credenciais.");
     }
   };
 
   return (
-    <Container sx={{ backgroundColor: '#fff' }}>
-      <Grid container sx={{ p: '40% 0 0 0' }}>
+    <Container
+      sx={{ backgroundColor: "#fff", display: "flex", alignItems: "center" }}
+    >
+      <Grid container sx={{ alignItems:"center", flexDirection: "column" }}>
         <Grid
           item
           xs={12}
           sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
+            display: "flex",
+
+            justifyContent: "center",
+            alignItems: "center",
           }}
         >
           <Typography
             sx={{
-              color: '#f46c26',
-              fontSize: '22px',
+              color: "#f46c26",
+              fontSize: "22px",
               fontWeight: 600,
             }}
           >
@@ -67,16 +74,16 @@ export const Login = () => {
           item
           xs={12}
           sx={{
-            height: '100px',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
+            height: "100px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
           }}
         >
           <Typography
             sx={{
-              color: '#f46c26',
-              fontSize: '32px',
+              color: "#f46c26",
+              fontSize: "32px",
               fontWeight: 600,
             }}
           >
@@ -89,16 +96,16 @@ export const Login = () => {
             item
             xs={12}
             sx={{
-              display: 'grid',
-              gap: '50px',
-              p: '0 20px 0 20px',
+              display: "grid",
+              gap: "50px",
+              p: "0 20px 0 20px",
             }}
           >
             <TextField
               type="email"
               label="Email"
               variant="standard"
-              {...register('email')}
+              {...register("email")}
               error={!!errors.email}
               helperText={errors.email?.message}
             />
@@ -106,7 +113,7 @@ export const Login = () => {
               type="password"
               label="Senha"
               variant="standard"
-              {...register('password')}
+              {...register("password")}
               error={!!errors.password}
               helperText={errors.password?.message}
             />
@@ -115,18 +122,18 @@ export const Login = () => {
             container
             width="100%"
             sx={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              mt: '10px',
+              display: "flex",
+              justifyContent: "flex-end",
+              mt: "10px",
             }}
           >
             <Grid item xs={6}>
               <Typography
                 sx={{
-                  textAlign: 'center',
+                  textAlign: "center",
                 }}
               >
-                <Link to="#" style={{ textDecoration: 'none' }}>
+                <Link to="#" style={{ textDecoration: "none" }}>
                   Esqueceu a senha?
                 </Link>
               </Typography>
@@ -135,19 +142,19 @@ export const Login = () => {
               item
               xs={12}
               sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                mt: '50px',
+                display: "flex",
+                justifyContent: "center",
+                mt: "50px",
               }}
             >
               <Button
                 type="submit"
                 variant="contained"
                 sx={{
-                  width: '200px',
-                  height: '50px',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
+                  width: "200px",
+                  height: "50px",
+                  borderRadius: "10px",
+                  cursor: "pointer",
                 }}
               >
                 Entrar
@@ -157,7 +164,7 @@ export const Login = () => {
         </form>
 
         {apiError && (
-          <Typography color="error" sx={{ textAlign: 'center', mt: 2 }}>
+          <Typography color="error" sx={{ textAlign: "center", mt: 2 }}>
             {apiError}
           </Typography>
         )}

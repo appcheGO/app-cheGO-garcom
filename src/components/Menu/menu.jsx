@@ -13,7 +13,7 @@ import Image3 from "../../../public/hamburguer.png";
 import Image4 from "../../../public/comida-mexicana.png";
 import Image5 from "../../../public/refrigerantes.png";
 import SearchIcon from "@mui/icons-material/Search";
-
+import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/useCarrinho";
 import * as Yup from "yup";
 import {
@@ -27,9 +27,8 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-
 import "./menu.css";
-
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useFormat } from "./../../utils/useFormat";
 import {
   addDoc,
@@ -72,6 +71,7 @@ CustomTabPanel.propTypes = {
 };
 
 export default function Menu() {
+  const navigate = useNavigate();
   const firebaseConfig = {
     apiKey: "AIzaSyCtUEJucj4FgNrJgwLhcpzZ7OJVCqjM8ls",
     authDomain: "testeapp-666bc.firebaseapp.com",
@@ -92,7 +92,6 @@ export default function Menu() {
   const [searchValue, setSearchValue] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [itemToAdd, setItemToAdd] = useState(null);
-
   const [refrigeranteDoCombo, setrefrigeranteDoCombo] = useState("");
   const [isSegundoModalOpen, setIsSegundoModalOpen] = useState(false);
   const [observacao, setObservacao] = useState("");
@@ -158,6 +157,11 @@ export default function Menu() {
     }
   };
 
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setIsSegundoModalOpen(false);
+  };
+
   const openConfirmationModal = (item, numeroDaMesaSelecionada) => {
     setItemToAdd(item);
     setrefrigeranteDoCombo("");
@@ -165,15 +169,15 @@ export default function Menu() {
     setObservacao("");
     addToCart(item, mesa);
     adicionarItensAMesa(numeroDaMesaSelecionada);
+
     if (value === 0 && activeTab === "combos") {
       setIsModalOpen(true);
+      setIsSegundoModalOpen(false);
     } else if (value !== 4 && activeTab !== "bebidas") {
+      setIsModalOpen(false);
       setIsSegundoModalOpen(true);
-    } else {
-      //
     }
   };
-
   const handleSearchInputChange = (e) => {
     setSearchValue(e.target.value);
   };
@@ -217,7 +221,6 @@ export default function Menu() {
 
         const opcionalSelecionado = opcionais.split("_")[0];
 
-        const itensExistente = documentoExistente.data().Pedido || [];
         const novosItens = cartState.items.map((item) => ({
           ...item,
           refrigeranteDoCombo: refrigeranteDoCombo || "",
@@ -229,7 +232,7 @@ export default function Menu() {
 
         /*problema que fica acrescentando o item anterior ao pedido*/
         await updateDoc(documentoExistente.ref, {
-          Pedido: [...itensExistente, ...novosItens],
+          Pedido: [...novosItens],
         });
         /*problema que fica acrescentando o item anterior ao pedido*/
       } else {
@@ -262,6 +265,27 @@ export default function Menu() {
 
   return (
     <>
+      <Button
+        className="click box-shadow"
+        sx={{
+          display: "flex",
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-evenly",
+          width: "90%",
+          mt: 1,
+          backgroundColor: "#f76d26",
+          color: "#f7e9e1",
+          zIndex: "4",
+          "&:hover": {
+            backgroundColor: "#f76d26",
+          },
+        }}
+        onClick={() => navigate(-1)}
+      >
+        <ArrowBackIcon />
+        Voltar a pagina das mesas
+      </Button>
       <Tabs
         id="sectionsmenu"
         value={value}
@@ -948,13 +972,13 @@ export default function Menu() {
                 if (!opcionais) {
                   setRefrigeranteError("Escolha um opcional");
                 } else {
-                  setRefrigeranteError(""); // Limpe o erro se uma escolha opcional foi feita
-
+                  setRefrigeranteError("");
                   adicionarItensAMesa(mesa);
+                  handleModalClose();
                 }
               }}
             >
-              Adicionar ao carrinho
+              Adicionar a comanda
             </Button>
           </Box>
         </Box>
