@@ -15,6 +15,8 @@ import Image5 from "../../../public/refrigerantes.png";
 import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/useCarrinho";
+import Snackbar from "@mui/material/Snackbar";
+import MuiAlert from "@mui/material/Alert";
 import * as Yup from "yup";
 import {
   Button,
@@ -101,6 +103,8 @@ export default function Menu() {
   const [refrigeranteError, setRefrigeranteError] = useState("");
   const [bordaOptions, setBordaOptions] = useState([]);
   const { addToCart, cartState } = useCart();
+  const [isSnackbarOpen, setIsSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
   const [firebaseData, setFirebaseData] = useState({});
   useEffect(() => {
     fetch(`https://testeapp-666bc-default-rtdb.firebaseio.com/.json`)
@@ -202,7 +206,18 @@ export default function Menu() {
         firestore,
         `PEDIDOS MESAS/MESA ${numeroDaMesaSelecionada}/STATUS`
       );
-
+      const nomeDoItemAdicionado =
+        cartState.items.length > 0
+          ? cartState.items[cartState.items.length - 1].item.sabor
+          : null;
+      console.log(
+        "Produto",
+        cartState.items[cartState.items.length - 1].item.sabor
+      );
+      setIsSnackbarOpen(true);
+      setSnackbarMessage(
+        `${nomeDoItemAdicionado} foi adicionado à comanda com sucesso!`
+      );
       const consulta = query(
         mesaCollectionRef,
         orderBy("idPedido", "desc"),
@@ -368,14 +383,13 @@ export default function Menu() {
         <CustomTabPanel
           sx={{
             position: "absolute",
-
             height: "100%",
             minHeight: "340px",
             width: "100%",
             minWidth: "320px",
             overflow: "auto",
             zIndex: "1",
-            padding: " 15px 13px 11rem 13px",
+            padding: "2rem 15px 16rem",
           }}
           value={value}
           index={0}
@@ -428,7 +442,7 @@ export default function Menu() {
             minWidth: "320px",
             overflow: "auto",
             zIndex: "1",
-            padding: " 15px 13px 11rem 13px",
+            padding: "2rem 15px 16rem",
           }}
         >
           {firebaseData.pizzas &&
@@ -480,7 +494,7 @@ export default function Menu() {
             minWidth: "320px",
             overflow: "auto",
             zIndex: "1",
-            padding: " 15px 13px 11rem 13px",
+            padding: "2rem 15px 16rem",
           }}
         >
           {firebaseData.hamburger &&
@@ -532,7 +546,7 @@ export default function Menu() {
             minWidth: "320px",
             overflow: "auto",
             zIndex: "1",
-            padding: " 15px 13px 11rem 13px",
+            padding: "2rem 15px 16rem",
           }}
         >
           {firebaseData.paoArabe &&
@@ -563,7 +577,10 @@ export default function Menu() {
                         </Typography>
                         <AddShoppingCartIcon
                           className="iconAddProduct click"
-                          onClick={() => openConfirmationModal(item)}
+                          onClick={() => {
+                            console.log("Item a ser adicionado à mesa:", item),
+                              openConfirmationModal(item);
+                          }}
                         />
                       </Box>
                     </Box>
@@ -584,7 +601,7 @@ export default function Menu() {
             minWidth: "320px",
             overflow: "auto",
             zIndex: "1",
-            padding: " 15px 13px 11rem 13px",
+            padding: "2rem 15px 16rem",
           }}
         >
           {firebaseData.drinks &&
@@ -615,7 +632,10 @@ export default function Menu() {
                         </Typography>
                         <AddShoppingCartIcon
                           className="iconAddProduct click"
-                          onClick={() => openConfirmationModal(item)}
+                          onClick={() => {
+                            console.log("Item a ser adicionado à mesa:", item);
+                            openConfirmationModal(item);
+                          }}
                         />
                       </Box>
                     </Box>
@@ -623,6 +643,21 @@ export default function Menu() {
                 </Card>
               ))}
         </CustomTabPanel>
+        <Snackbar
+          sx={{ position: "absolute", bottom: "2rem", zIndex: "1400" }}
+          open={isSnackbarOpen}
+          autoHideDuration={3000}
+          onClose={() => setIsSnackbarOpen(false)}
+        >
+          <MuiAlert
+            elevation={6}
+            variant="filled"
+            onClose={() => setIsSnackbarOpen(false)}
+            severity="success"
+          >
+            {snackbarMessage}
+          </MuiAlert>
+        </Snackbar>
       </Box>
 
       {/*---- Fazendo isso para separar o modal pra nao confundir( a partir daqui tem dois modais)*/}

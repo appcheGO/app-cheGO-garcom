@@ -85,10 +85,21 @@ function CommandWaiter() {
       );
       const statusSnapshot = await getDocs(statusCollectionRef);
 
-      if (statusSnapshot.empty) {
+      if (
+        statusSnapshot.empty ||
+        !statusSnapshot.docs[0].data().Pedido ||
+        statusSnapshot.docs[0].data().Pedido.length === 0
+      ) {
         setMesaStatus((prevStatus) => ({ ...prevStatus, [mesa]: "LIVRE" }));
       } else {
-        setMesaStatus((prevStatus) => ({ ...prevStatus, [mesa]: "OCUPADA" }));
+        const pedidoArray = statusSnapshot.docs[0].data().Pedido;
+        const hasItems = pedidoArray.some((item) => item && item.item);
+
+        if (hasItems) {
+          setMesaStatus((prevStatus) => ({ ...prevStatus, [mesa]: "OCUPADA" }));
+        } else {
+          setMesaStatus((prevStatus) => ({ ...prevStatus, [mesa]: "LIVRE" }));
+        }
       }
     } else {
       setMesaStatus((prevStatus) => ({ ...prevStatus, [mesa]: "LIVRE" }));
@@ -116,8 +127,6 @@ function CommandWaiter() {
       const pedidoData = documentoExistente.data();
       setSelectedPedido(pedidoData);
       setShowPedidoDetailsModal(true);
-    } else {
-      console.log("Não foram encontrados pedidos para esta mesa.");
     }
   };
 
@@ -162,9 +171,9 @@ function CommandWaiter() {
             ...documentoExistente.data().Pedido,
             {
               ...cartState.items,
-              quantidadeDePessoasNaMesa: peopleCount,
             },
           ],
+          quantidadeDePessoasNaMesa: peopleCount,
           dataHoraPedido: dataHoraPedido,
         });
       } else {
