@@ -49,7 +49,7 @@ export const Login = () => {
     <Container
       sx={{ backgroundColor: "#fff", display: "flex", alignItems: "center" }}
     >
-      <Grid container sx={{ alignItems:"center", flexDirection: "column" }}>
+      <Grid container sx={{ alignItems: "center", flexDirection: "column" }}>
         <Grid
           item
           xs={12}

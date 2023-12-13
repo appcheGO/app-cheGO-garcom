@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 // eslint-disable-next-line no-unused-vars
 import PropTypes from "prop-types";
@@ -13,7 +13,6 @@ import Image3 from "../../../public/hamburguer.png";
 import Image4 from "../../../public/comida-mexicana.png";
 import Image5 from "../../../public/refrigerantes.png";
 import SearchIcon from "@mui/icons-material/Search";
-import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/useCarrinho";
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
@@ -206,14 +205,11 @@ export default function Menu() {
         firestore,
         `PEDIDOS MESAS/MESA ${numeroDaMesaSelecionada}/STATUS`
       );
+
       const nomeDoItemAdicionado =
         cartState.items.length > 0
           ? cartState.items[cartState.items.length - 1].item.sabor
           : null;
-      console.log(
-        "Produto",
-        cartState.items[cartState.items.length - 1].item.sabor
-      );
       setIsSnackbarOpen(true);
       setSnackbarMessage(
         `${nomeDoItemAdicionado} foi adicionado à comanda com sucesso!`
@@ -223,33 +219,30 @@ export default function Menu() {
         orderBy("idPedido", "desc"),
         limit(1)
       );
-      const resultadoConsulta = await getDocs(consulta);
 
-      let idDoPedido;
+      const resultadoConsulta = await getDocs(consulta);
+      let idDoPedido = null;
 
       if (resultadoConsulta.size > 0) {
         const documentoExistente = resultadoConsulta.docs[0];
         idDoPedido = documentoExistente.data().idPedido;
         const adicionalSelected = adicional.filter((item) => item.qtde > 0);
-
         const valorOpcional = parseFloat(opcionais.split("_")[1]);
 
         const opcionalSelecionado = opcionais.split("_")[0];
 
-        const novosItens = cartState.items.map((item) => ({
-          ...item,
+        const novosItem = {
+          ...itemToAdd,
           refrigeranteDoCombo: refrigeranteDoCombo || "",
           opcionais: opcionalSelecionado || "",
           Valoropcional: valorOpcional || "",
           adicional: adicionalSelected || "",
           observacao: observacao || "",
-        }));
+        };
 
-        /*problema que fica acrescentando o item anterior ao pedido*/
         await updateDoc(documentoExistente.ref, {
-          Pedido: [...novosItens],
+          Pedido: [...documentoExistente.data().Pedido, novosItem],
         });
-        /*problema que fica acrescentando o item anterior ao pedido*/
       } else {
         const dataAtual = new Date();
         idDoPedido = `${dataAtual.getDate()}${
@@ -261,18 +254,19 @@ export default function Menu() {
 
         const opcionalSelecionado = opcionais.split("_")[0];
 
-        const novosItens = cartState.items.map((item) => ({
-          ...item,
+        const novosItem = {
+          ...itemToAdd,
           refrigeranteDoCombo: refrigeranteDoCombo || "",
           opcionais: opcionalSelecionado || "",
           Valoropcional: valorOpcional || "",
           adicional: adicionalSelected || "",
           observacao: observacao || "",
-        }));
+        };
 
         await addDoc(mesaCollectionRef, {
+          data: dataAtual,
           idPedido: idDoPedido,
-          Pedido: novosItens,
+          Pedido: [novosItem],
         });
       }
     }
@@ -578,8 +572,7 @@ export default function Menu() {
                         <AddShoppingCartIcon
                           className="iconAddProduct click"
                           onClick={() => {
-                            console.log("Item a ser adicionado à mesa:", item),
-                              openConfirmationModal(item);
+                            openConfirmationModal(item);
                           }}
                         />
                       </Box>
@@ -633,8 +626,7 @@ export default function Menu() {
                         <AddShoppingCartIcon
                           className="iconAddProduct click"
                           onClick={() => {
-                            console.log("Item a ser adicionado à mesa:", item);
-                            openConfirmationModal(item);
+                            adicionarItensAMesa(item);
                           }}
                         />
                       </Box>
