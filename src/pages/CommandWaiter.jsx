@@ -8,6 +8,8 @@ import {
   collection,
   getDocs,
   query,
+  addDoc,
+  limit,
 } from "firebase/firestore";
 import {
   AppBar,
@@ -137,12 +139,38 @@ function CommandWaiter() {
   const handleInputChange = (event) => {
     setPeopleCount(Number(event.target.value));
   };
-
+  const dataAtual = new Date();
   const handleAddPedido = async () => {
     if (selectedTable) {
       dispatch({ type: "CLEAR_CART" });
-
       navigate(`/cardapio/${selectedTable}`);
+
+      const mesaCollectionRef = collection(
+        firestore,
+        `PEDIDOS MESAS/MESA ${selectedTable}/STATUS`
+      );
+
+      const consulta = query(
+        mesaCollectionRef,
+        orderBy("idDoPedido", "desc"),
+        limit(1)
+      );
+
+      const resultadoConsulta = await getDocs(consulta);
+
+      if (resultadoConsulta.size === 0) {
+        const idDoPedido = `${dataAtual.getDate()}${
+          dataAtual.getMonth() + 1
+        }${dataAtual.getFullYear()}${dataAtual.getHours()}${dataAtual.getMinutes()}${dataAtual.getSeconds()}`;
+
+        await addDoc(mesaCollectionRef, {
+          idDoPedido,
+          Pedido: [],
+          User: currentUser.email,
+          Data: dataAtual,
+          QtdePessoasNaMesa: peopleCount,
+        });
+      }
     }
   };
 
