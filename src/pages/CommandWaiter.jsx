@@ -440,7 +440,7 @@ function CommandWaiter() {
                                   (pedidoItem.adicional
                                     ? pedidoItem.adicional.reduce(
                                         (subtotal, item) =>
-                                          subtotal + Number(item.valor),
+                                          subtotal + Number(item.valor * item.qtde),
                                         0
                                       )
                                     : 0)
