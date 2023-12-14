@@ -7,10 +7,9 @@ import {
   getDoc,
   collection,
   getDocs,
-  addDoc,
   query,
+  addDoc,
   limit,
-  updateDoc,
 } from "firebase/firestore";
 import {
   AppBar,
@@ -50,7 +49,7 @@ function CommandWaiter() {
   const [showModal, setShowModal] = useState(false);
   const [peopleCount, setPeopleCount] = useState(1);
   const [currentUser, setCurrentUser] = useState(null);
-  const { cartState, dispatch } = useCart();
+  const { dispatch } = useCart();
   const [selectedTable, setSelectedTable] = useState(null);
   const [showPedidoDetailsModal, setShowPedidoDetailsModal] = useState(false);
   const [selectedPedido, setSelectedPedido] = useState(null);
@@ -83,23 +82,19 @@ function CommandWaiter() {
         firestore,
         `PEDIDOS MESAS/MESA ${mesa}/STATUS`
       );
+
       const statusSnapshot = await getDocs(statusCollectionRef);
 
-      if (
-        statusSnapshot.empty ||
-        !statusSnapshot.docs[0].data().Pedido ||
-        statusSnapshot.docs[0].data().Pedido.length === 0
-      ) {
-        setMesaStatus((prevStatus) => ({ ...prevStatus, [mesa]: "LIVRE" }));
-      } else {
+      if (statusSnapshot.docs.length > 0) {
         const pedidoArray = statusSnapshot.docs[0].data().Pedido;
-        const hasItems = pedidoArray.some((item) => item && item.item);
 
-        if (hasItems) {
+        if (pedidoArray && pedidoArray.length > 0) {
           setMesaStatus((prevStatus) => ({ ...prevStatus, [mesa]: "OCUPADA" }));
         } else {
           setMesaStatus((prevStatus) => ({ ...prevStatus, [mesa]: "LIVRE" }));
         }
+      } else {
+        setMesaStatus((prevStatus) => ({ ...prevStatus, [mesa]: "LIVRE" }));
       }
     } else {
       setMesaStatus((prevStatus) => ({ ...prevStatus, [mesa]: "LIVRE" }));
@@ -111,6 +106,7 @@ function CommandWaiter() {
       fetchMesaStatus(mesa);
     }
   };
+
   const handleOpenModalListaItens = async (table) => {
     setSelectedTable(table);
 
@@ -143,9 +139,12 @@ function CommandWaiter() {
   const handleInputChange = (event) => {
     setPeopleCount(Number(event.target.value));
   };
-
+  const dataAtual = new Date();
   const handleAddPedido = async () => {
     if (selectedTable) {
+      dispatch({ type: "CLEAR_CART" });
+      navigate(`/cardapio/${selectedTable}`);
+
       const mesaCollectionRef = collection(
         firestore,
         `PEDIDOS MESAS/MESA ${selectedTable}/STATUS`
@@ -153,53 +152,25 @@ function CommandWaiter() {
 
       const consulta = query(
         mesaCollectionRef,
-        orderBy("idPedido", "desc"),
+        orderBy("idDoPedido", "desc"),
         limit(1)
       );
+
       const resultadoConsulta = await getDocs(consulta);
 
-      let idDoPedido;
-      let dataHoraPedido;
-
-      if (resultadoConsulta.size > 0) {
-        const documentoExistente = resultadoConsulta.docs[0];
-        idDoPedido = documentoExistente.data().idPedido;
-        dataHoraPedido = new Date().toLocaleString();
-
-        await updateDoc(documentoExistente.ref, {
-          Pedido: [
-            ...documentoExistente.data().Pedido,
-            {
-              ...cartState.items,
-            },
-          ],
-          quantidadeDePessoasNaMesa: peopleCount,
-          dataHoraPedido: dataHoraPedido,
-        });
-      } else {
-        const dataAtual = new Date();
-        idDoPedido = `${dataAtual.getDate()}${
+      if (resultadoConsulta.size === 0) {
+        const idDoPedido = `${dataAtual.getDate()}${
           dataAtual.getMonth() + 1
         }${dataAtual.getFullYear()}${dataAtual.getHours()}${dataAtual.getMinutes()}${dataAtual.getSeconds()}`;
 
-        dataHoraPedido = dataAtual.toLocaleString();
-        currentUser.email;
         await addDoc(mesaCollectionRef, {
-          idPedido: idDoPedido,
-          Pedido: [
-            {
-              ...cartState.items,
-            },
-          ],
-          quantidadeDePessoasNaMesa: peopleCount,
-          dataHoraPedido: dataHoraPedido,
-          UsuarioQueIniciouOPedido: currentUser.email,
+          idDoPedido,
+          Pedido: [],
+          User: currentUser.email,
+          Data: dataAtual,
+          QtdePessoasNaMesa: peopleCount,
         });
       }
-
-      dispatch({ type: "CLEAR_CART" });
-
-      navigate(`/cardapio/${selectedTable}`);
     }
   };
 
@@ -328,8 +299,10 @@ function CommandWaiter() {
                 Comanda: {selectedPedido.idPedido}
               </Typography>
               <Typography variant="h6">
-                Pedido Iniciado : {selectedPedido.dataHoraPedido}
+                Pedido Iniciado:{" "}
+                {selectedPedido.data?.toDate().toLocaleString()}
               </Typography>
+
               <hr />
               <Box>
                 {selectedPedido && selectedPedido.Pedido && (
@@ -339,7 +312,7 @@ function CommandWaiter() {
                         <p>
                           Item:{" "}
                           <span style={{ fontWeight: "200" }}>
-                            {pedidoItem.item.sabor}
+                            {pedidoItem.sabor}
                           </span>
                         </p>
                         {pedidoItem.refrigeranteDoCombo == "" ? (
@@ -352,33 +325,47 @@ function CommandWaiter() {
                             </span>
                           </p>
                         )}
-
-                        <p>
-                          Valor:{" "}
-                          <span style={{ fontWeight: "200" }}>
-                            {useFormat(pedidoItem.item.valor)}
-                          </span>
-                        </p>
-                        <p>
-                          Opcional:{" "}
-                          <span style={{ fontWeight: "200" }}>
-                            {pedidoItem.opcionais}
-                          </span>
-                        </p>
-                        {pedidoItem.Valoropcional == "" ||
-                        pedidoItem.Valoropcional == 0 ? (
+                        {pedidoItem.ingredientes &&
+                        pedidoItem.ingredientes.includes("Bebida") ? (
                           <p>
-                            Valor Opcional:
-                            <span style={{ fontWeight: "200" }}>Gratis</span>
-                          </p>
-                        ) : (
-                          <p>
-                            Valor Opcional:{" "}
+                            Valor:{" "}
                             <span style={{ fontWeight: "200" }}>
-                              {useFormat(pedidoItem.Valoropcional)}
+                              {useFormat(pedidoItem.valor)}
                             </span>
                           </p>
+                        ) : (
+                          <>
+                            <p>
+                              Valor (a):{" "}
+                              <span style={{ fontWeight: "200" }}>
+                                {useFormat(pedidoItem.valor)}
+                              </span>
+                            </p>
+                            <p>
+                              Opcional:{" "}
+                              <span style={{ fontWeight: "200" }}>
+                                {pedidoItem.opcionais}
+                              </span>
+                            </p>
+                            {pedidoItem.Valoropcional == "" ||
+                            pedidoItem.Valoropcional == 0 ? (
+                              <p>
+                                Valor Opcional (b):
+                                <span style={{ fontWeight: "200" }}>
+                                  Gratis
+                                </span>
+                              </p>
+                            ) : (
+                              <p>
+                                Valor Opcional (b):
+                                <span style={{ fontWeight: "200" }}>
+                                  {useFormat(pedidoItem.Valoropcional)}
+                                </span>
+                              </p>
+                            )}
+                          </>
                         )}
+
                         {pedidoItem.adicional == 0 ? (
                           <Box />
                         ) : (
@@ -398,13 +385,34 @@ function CommandWaiter() {
                                     >
                                       {adicionalItem.name}-({adicionalItem.qtde}
                                       x)-
-                                      {useFormat(adicionalItem.valor)}
+                                      {useFormat(adicionalItem.valor)} - (
+                                      {useFormat(
+                                        adicionalItem.valor * adicionalItem.qtde
+                                      )}
+                                      )
                                     </li>
                                   </span>
                                 )
                               )}
+
+                              {/* Calcular o total dos valores dos itens adicionais */}
+                              <p>
+                                Valor Adicionais(c):{" "}
+                                <span style={{ fontWeight: "200" }}>
+                                  {useFormat(
+                                    pedidoItem.adicional.reduce(
+                                      (total, adicionalItem) =>
+                                        total +
+                                        adicionalItem.qtde *
+                                          adicionalItem.valor,
+                                      0
+                                    )
+                                  )}
+                                </span>
+                              </p>
                             </ul>
                           )}
+
                         {pedidoItem.observacao == "" ? (
                           <Box />
                         ) : (
@@ -419,25 +427,43 @@ function CommandWaiter() {
                         <p>
                           Quantidade:{" "}
                           <span style={{ fontWeight: "200" }}>
-                            {pedidoItem.item.quantidade}
+                            {pedidoItem.quantidade}
                           </span>
                         </p>
-                        <p>
-                          Valor total do item:{" "}
-                          <span style={{ fontWeight: "200" }}>
-                            {useFormat(
-                              Number(pedidoItem.item.valor) +
-                                Number(pedidoItem.Valoropcional) +
-                                (pedidoItem.adicional
-                                  ? pedidoItem.adicional.reduce(
-                                      (total, item) =>
-                                        total + Number(item.valor),
-                                      0
-                                    )
-                                  : 0)
+                        {pedidoItem.adicional.length > 0 ? (
+                          <p>
+                            <b>Valor total do item (a + b + c): </b>
+                            <span style={{ fontWeight: "200" }}>
+                              {useFormat(
+                                Number(pedidoItem.valor) +
+                                  Number(pedidoItem.Valoropcional) +
+                                  (pedidoItem.adicional
+                                    ? pedidoItem.adicional.reduce(
+                                        (subtotal, item) =>
+                                          subtotal + Number(item.valor * item.qtde),
+                                        0
+                                      )
+                                    : 0)
+                              )}
+                            </span>
+                          </p>
+                        ) : (
+                          <p>
+                            {pedidoItem.ingredientes &&
+                            pedidoItem.ingredientes.includes("Bebida") ? (
+                              <b>Valor total do item :</b>
+                            ) : (
+                              <b>Valor total do item (a)+(b) :</b>
                             )}
-                          </span>
-                        </p>
+
+                            <span style={{ fontWeight: "200" }}>
+                              {useFormat(
+                                Number(pedidoItem.valor) +
+                                  Number(pedidoItem.Valoropcional)
+                              )}
+                            </span>
+                          </p>
+                        )}
 
                         <hr />
                       </Box>
@@ -448,12 +474,12 @@ function CommandWaiter() {
                         selectedPedido.Pedido.reduce((total, pedidoItem) => {
                           return (
                             total +
-                            Number(pedidoItem.item.valor) +
+                            Number(pedidoItem.valor) +
                             Number(pedidoItem.Valoropcional) +
                             (pedidoItem.adicional
                               ? pedidoItem.adicional.reduce(
                                   (subtotal, item) =>
-                                    subtotal + Number(item.valor),
+                                    subtotal + Number(item.qtde * item.valor),
                                   0
                                 )
                               : 0)
@@ -461,7 +487,7 @@ function CommandWaiter() {
                         }, 0)
                       )}
                     </Typography>
-                    <Typography variant="subtitle2">
+                    {/* <Typography variant="subtitle2">
                       Quantidade de Pessoas na mesa:{" "}
                       {selectedPedido.quantidadeDePessoasNaMesa}
                     </Typography>
@@ -471,7 +497,7 @@ function CommandWaiter() {
                         selectedPedido.Pedido.reduce((total, pedidoItem) => {
                           return (
                             (total +
-                              Number(pedidoItem.item.valor) +
+                              Number(pedidoItem.valor) +
                               Number(pedidoItem.Valoropcional) +
                               (pedidoItem.adicional
                                 ? pedidoItem.adicional.reduce(
@@ -484,7 +510,7 @@ function CommandWaiter() {
                           );
                         }, 0)
                       )}
-                    </Typography>
+                    </Typography>*/}
                   </Box>
                 )}
               </Box>

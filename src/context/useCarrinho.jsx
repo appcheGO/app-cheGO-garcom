@@ -1,8 +1,9 @@
-import { createContext, useContext, useReducer } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useReducer } from "react";
 
 const actionTypes = {
-  ADD_TO_CART: 'ADD_TO_CART',
-  CLEAR_CART: 'CLEAR_CART',
+  ADD_TO_CART: "ADD_TO_CART",
+  CLEAR_CART: "CLEAR_CART",
 };
 
 const CartContext = createContext();
@@ -33,7 +34,6 @@ export const CartProvider = ({ children }) => {
   const [cartState, dispatch] = useReducer(cartReducer, initialState);
 
   const addToCart = (item, mesa) => {
-    // Aqui você pode adicionar lógica personalizada antes de despachar a ação
     dispatch({ type: actionTypes.ADD_TO_CART, payload: { item, mesa } });
   };
 
@@ -47,7 +47,7 @@ export const CartProvider = ({ children }) => {
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
-    throw new Error('useCart deve ser usado dentro de um CartProvider');
+    throw new Error("useCart deve ser usado dentro de um CartProvider");
   }
   return context;
 };
