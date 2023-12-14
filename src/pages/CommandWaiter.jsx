@@ -325,33 +325,47 @@ function CommandWaiter() {
                             </span>
                           </p>
                         )}
-
-                        <p>
-                          Valor (a):{" "}
-                          <span style={{ fontWeight: "200" }}>
-                            {useFormat(pedidoItem.valor)}
-                          </span>
-                        </p>
-                        <p>
-                          Opcional:{" "}
-                          <span style={{ fontWeight: "200" }}>
-                            {pedidoItem.opcionais}
-                          </span>
-                        </p>
-                        {pedidoItem.Valoropcional == "" ||
-                        pedidoItem.Valoropcional == 0 ? (
+                        {pedidoItem.ingredientes &&
+                        pedidoItem.ingredientes.includes("Bebida") ? (
                           <p>
-                            Valor Opcional (b):
-                            <span style={{ fontWeight: "200" }}>Gratis</span>
-                          </p>
-                        ) : (
-                          <p>
-                            Valor Opcional (b):
+                            Valor:{" "}
                             <span style={{ fontWeight: "200" }}>
-                              {useFormat(pedidoItem.Valoropcional)}
+                              {useFormat(pedidoItem.valor)}
                             </span>
                           </p>
+                        ) : (
+                          <>
+                            <p>
+                              Valor (a):{" "}
+                              <span style={{ fontWeight: "200" }}>
+                                {useFormat(pedidoItem.valor)}
+                              </span>
+                            </p>
+                            <p>
+                              Opcional:{" "}
+                              <span style={{ fontWeight: "200" }}>
+                                {pedidoItem.opcionais}
+                              </span>
+                            </p>
+                            {pedidoItem.Valoropcional == "" ||
+                            pedidoItem.Valoropcional == 0 ? (
+                              <p>
+                                Valor Opcional (b):
+                                <span style={{ fontWeight: "200" }}>
+                                  Gratis
+                                </span>
+                              </p>
+                            ) : (
+                              <p>
+                                Valor Opcional (b):
+                                <span style={{ fontWeight: "200" }}>
+                                  {useFormat(pedidoItem.Valoropcional)}
+                                </span>
+                              </p>
+                            )}
+                          </>
                         )}
+
                         {pedidoItem.adicional == 0 ? (
                           <Box />
                         ) : (
@@ -418,7 +432,7 @@ function CommandWaiter() {
                         </p>
                         {pedidoItem.adicional.length > 0 ? (
                           <p>
-                            Valor total do item (a + b + c):{" "}
+                            <b>Valor total do item (a + b + c): </b>
                             <span style={{ fontWeight: "200" }}>
                               {useFormat(
                                 Number(pedidoItem.valor) +
@@ -435,7 +449,13 @@ function CommandWaiter() {
                           </p>
                         ) : (
                           <p>
-                            Valor total do item (a + b):{" "}
+                            {pedidoItem.ingredientes &&
+                            pedidoItem.ingredientes.includes("Bebida") ? (
+                              <b>Valor total do item :</b>
+                            ) : (
+                              <b>Valor total do item (a)+(b) :</b>
+                            )}
+
                             <span style={{ fontWeight: "200" }}>
                               {useFormat(
                                 Number(pedidoItem.valor) +
